@@ -39,19 +39,18 @@ export default class Status extends Component {
 
   componentWillMount () {
     const that = this
-    this.debounceStatusUpdate = debounce(function () {
-      if (!that.state.debounced) {
-        const shouldSilence = !that.props.isInFocus || that.props.validChoiceMade
-        that.setState(({ bump }) => ({ bump: !bump, debounced: true, silenced: shouldSilence }))
+    let flip = false
+    this.debounceStatusUpdate = debounce(function (content) {
+      const shouldSilence = !that.props.isInFocus || that.props.validChoiceMade
+      if (!shouldSilence) {
+        const liveElementSelector = (flip) ? '#ariaLiveA' : '#ariaLiveB'
+        document.querySelector(liveElementSelector).textContent = content.trim()
+        flip = !flip
       }
     }, statusDebounceMillis)
   }
 
-  componentWillReceiveProps ({ queryLength }) {
-    this.setState({ debounced: false })
-  }
-
-  render () {
+  componentDidUpdate () {
     const {
       length,
       queryLength,
@@ -63,11 +62,9 @@ export default class Status extends Component {
       tSelectedOption,
       tResults
     } = this.props
-    const { bump, debounced, silenced } = this.state
 
     const queryTooShort = queryLength < minQueryLength
     const noResults = length === 0
-
     const contentSelectedOption = selectedOption
       ? tSelectedOption(selectedOption, length, selectedOptionIndex)
       : ''
@@ -81,8 +78,10 @@ export default class Status extends Component {
       content = tResults(length, contentSelectedOption)
     }
 
-    this.debounceStatusUpdate()
+    this.debounceStatusUpdate(content)
+  }
 
+  render () {
     return (
       <div
         style={{
@@ -100,15 +99,11 @@ export default class Status extends Component {
         <div
           id='ariaLiveA'
           aria-atomic='true'
-          aria-live='polite'>
-          {(!silenced && debounced && bump) ? content : ''}
-        </div>
+          aria-live='polite' />
         <div
           id='ariaLiveB'
           aria-atomic='true'
-          aria-live='polite'>
-          {(!silenced && debounced && !bump) ? content : ''}
-        </div>
+          aria-live='polite' />
       </div>
     )
   }
